@@ -1,0 +1,22 @@
+name: openwrt
+
+services:
+  router:
+    container_name: router
+    # or use official prebuilt image "openwrt/rootfs:x86-64-vXX.XX.X" (https://hub.docker.com/r/openwrt/rootfs/tags?name=x86-64)
+    image: shmshd/openwrt:24.10.5
+    build: .
+    ports:
+      - "4080:80"
+      - "4043:443"
+    networks:
+      - router
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256MB
+
+networks:
+  router:
+    driver: bridge
