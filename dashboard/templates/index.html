@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/milligram@1.4.1/dist/milligram.min.css">
+  <style>
+    body {
+      padding: 2rem;
+      background-color: #fafafa;
+      font-family: 'Roboto', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+    }
+
+    .container {
+      max-width: 80rem;
+      margin: 0 auto;
+    }
+
+    .center-align {
+      align-content: center;
+    }
+
+    .card {
+      background-color: #ffffff;
+      width: 100%;
+      border-radius: 8px;
+      padding: 2rem;
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+      border: 1px solid #e4e4e4;
+    }
+
+    .button {
+      background-color: #fbbf24;
+      color: #171717;
+    }
+
+    .button:hover {
+      background-color: #fcd34d;
+      color: #171717;
+    }
+
+    .status-loading {
+      color: #171717;
+    }
+
+    .status-success {
+      color: #15803d;
+    }
+
+    .status-error {
+      color: #dc2626;
+    }
+
+    .conn-status {
+      font-size: 1rem;
+      margin-left: 0.5rem;
+      padding: .5rem 0.7rem;
+      border-radius: 3px;
+      font-weight: bold;
+      vertical-align: middle;
+      text-transform: uppercase;
+    }
+
+    .conn-status.connected {
+      background-color: #dcfce7;
+      color: #16a34a;
+    }
+
+    .conn-status.disconnected {
+      background-color: #f4f4f5;
+      color: #52525b;
+    }
+
+    #route-conn-status,
+    #trace-conn-status,
+    #ping-conn-status {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+    }
+
+    pre {
+      position: relative;
+      background-color: #1e1e1e;
+      color: #d4d4d4;
+      padding: 1.5rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+      font-size: 1.4rem;
+      border: none;
+      line-height: 1.5;
+      margin-top: 0.5rem;
+      white-space: pre-wrap;
+    }
+
+    #route-output {
+      min-height: 90px;
+    }
+
+    #trace-output {
+      min-height: 160px;
+    }
+
+    #ping-output {
+      min-height: 190px;
+    }
+
+    .output-area.streaming {
+      color: #d4d4d4;
+    }
+
+    .spinner {
+      display: none;
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 0.3rem;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+      .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .grid {
+        grid-template-columns: 1fr; /* Stack cards vertically on small screens */
+      }
+
+      body {
+        padding: 1rem;
+      }
+
+      .card {
+        padding: 1.5rem;
+      }
+    }
+
+    .command {
+      color: #a1a1aa;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="row">
+    <div class="column">
+      <h2>Dashboard</h2>
+      <h4>Network test</h4>
+    </div>
+    <div class="center-align">
+      <button class="button" data-command="all">Run All</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Route Card -->
+    <div class="card">
+      <div class="row">
+        <div class="column">
+          <h3>Routing Configuration <span id="route-result-status"></span></h3>
+        </div>
+        <div class="column center-align">
+          <button data-command="route"
+                  class="button status-indicator status-loading float-right">
+            <span class="spinner"></span> Run
+          </button>
+        </div>
+      </div>
+      <p>Verify that traffic is routed via <code>10.10.10.10</code></p>
+      <pre id="route-output" class="output-area"><span class="command">$ ip route show default</span></pre>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Ping Card -->
+    <div class="card">
+      <div class="row">
+        <div class="column">
+          <h3>Internet Connection <span id="ping-result-status"></span></h3>
+        </div>
+        <div class="column center-align">
+          <button data-command="ping"
+                  class="button status-indicator status-loading float-right">
+            <span class="spinner"></span> Run
+          </button>
+        </div>
+      </div>
+      <p>Ping test to Cloudflare DNS to verify internet connectivity</p>
+      <div style="position: relative">
+        <pre id="ping-output" class="output-area"><span class="command">$ ping -c 3 1.1.1.1</span></pre>
+        <span id="ping-conn-status" class="conn-status disconnected">Disconnected</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Trace Card -->
+    <div class="card">
+      <div class="row">
+        <div class="column">
+          <h3>Traceroute Path <span id="trace-result-status"></span></h3>
+        </div>
+        <div class="column center-align">
+          <button data-command="trace"
+                  class="button status-indicator status-loading float-right">
+            <span class="spinner"></span> Run
+          </button>
+        </div>
+      </div>
+      <p class="description">Network path to Cloudflare DNS. <strong>HOP 1</strong> should
+        be the router.</p>
+      <div style="position: relative">
+      <pre id="trace-output" class="output-area"><span
+        class="command">$ traceroute -m 5 -w 1 1.1.1.1</span></pre>
+        <span id="trace-conn-status" class="conn-status disconnected">Disconnected</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  const RESULT_ICON = {
+    success: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    error: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
+  }
+  const BADGE_TEXT = {
+    'route-result-status': RESULT_ICON,
+    'trace-result-status': RESULT_ICON,
+    'ping-result-status': RESULT_ICON
+  };
+
+  let currentSources = {};
+
+  function updateResultStatus(resultStatusId, state, customText = null) {
+    const statusElement = document.getElementById(resultStatusId);
+    if (!statusElement) return;
+
+    let className, text;
+    switch (state) {
+      case 'loading':
+        className = 'status-loading';
+        text = `<span class="spinner"></span> Testing...`;
+        break;
+      case 'success':
+        className = 'status-success';
+        text = BADGE_TEXT[resultStatusId]?.success || 'Success';
+        break;
+      case 'error':
+        className = 'status-error';
+        text = BADGE_TEXT[resultStatusId]?.error || 'Error';
+        break;
+      default:
+        console.warn("Unknown result status state:", state);
+        return;
+    }
+
+    statusElement.classList.add(className);
+    statusElement.innerHTML = text;
+  }
+
+  function updateConnStatus(testName, connected) {
+    if (testName !== 'ping') {
+      const connStatusId = testName + '-conn-status';
+      const connStatusElement = document.getElementById(connStatusId);
+      if (connStatusElement) {
+        connStatusElement.className = `conn-status ${connected ? 'connected' : 'disconnected'}`;
+        connStatusElement.textContent = connected ? 'Connected' : 'Disconnected';
+      }
+    }
+  }
+
+  // Close existing connections
+  function closeExistingConnection(testName = null) {
+    if (testName) {
+      if (currentSources[testName]) {
+        currentSources[testName].close();
+        delete currentSources[testName];
+      }
+      console.log(`SSE closed for ${testName}`);
+      return;
+    }
+
+    Object.keys(currentSources).forEach(testName => {
+      currentSources[testName].close();
+    });
+    currentSources = {};
+  }
+
+  function resetTest(testName) {
+    const outputId = testName + '-output';
+    const resultStatusId = testName + '-result-status';
+    const outputElement = document.getElementById(outputId);
+    const resultStatusElement = document.getElementById(resultStatusId);
+
+    if (outputElement) {
+      outputElement.textContent = 'Waiting for test...';
+      outputElement.classList.remove('streaming');
+    }
+    if (resultStatusElement) {
+      updateResultStatus(resultStatusId, 'loading');
+    }
+    updateConnStatus(testName, false);
+  }
+
+
+  function startStreaming(testName) {
+    const outputId = testName + '-output';
+    const resultStatusId = testName + '-result-status';
+    const outputElement = document.getElementById(outputId);
+
+    closeExistingConnection(testName);
+
+    const sseEvent = new EventSource(`/api/stream/${testName}`);
+    currentSources[testName] = sseEvent;
+
+    updateConnStatus(testName, true);
+
+    sseEvent.onmessage = function (event) {
+
+      if (outputElement) {
+        if (outputElement.classList.contains('output-area') && outputElement.textContent.trim() === "Waiting for test...") {
+          outputElement.textContent = '';
+          outputElement.classList.add('streaming');
+        }
+
+        const formattedData = event.data.endsWith('\n') ? event.data : event.data + '\n';
+        outputElement.textContent += formattedData;
+      }
+    };
+
+    sseEvent.addEventListener('complete', function (event) {
+      try {
+        const data = JSON.parse(event.data);
+        const hasError = data.error;
+        updateResultStatus(resultStatusId, hasError ? 'error' : 'success');
+        console.log(`Test ${testName} completed. Result Error: ${hasError}`);
+      } catch (e) {
+        console.error('Error parsing complete event data for', testName, ':', e, event.data);
+        updateResultStatus(resultStatusId, 'error');
+      }
+    });
+
+    sseEvent.onopen = function () {
+      console.log(`SSE opened for ${testName}`);
+      updateConnStatus(testName, true);
+    };
+
+    sseEvent.onerror = function (event) {
+      console.error(`SSE connection failed/closed for ${testName}`, event);
+      sseEvent.close();
+      delete currentSources[testName];
+      updateConnStatus(testName, false);
+    };
+  }
+
+  const COMMANDS = ['route', 'trace', 'ping'];
+
+  function runCommand(name = null) {
+    const targets = name ? [name] : COMMANDS;
+    closeExistingConnection(name);
+    targets.forEach(cmd => {
+      resetTest(cmd);
+      startStreaming(cmd);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const buttons = document.querySelectorAll('[data-command]');
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cmd = btn.getAttribute('data-command');
+        runCommand(cmd === 'all' ? null : cmd);
+      });
+    });
+  });
+</script>
+</body>
+</html>

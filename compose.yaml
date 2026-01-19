@@ -9,14 +9,95 @@ services:
     ports:
       - "4080:80"
       - "4043:443"
+    # volumes:
+    #   - ./configs/openwrt/network:/etc/config/network
+    #   - ./configs/openwrt/firewall:/etc/config/firewall
     networks:
-      - router
+      wan:
+        ipv4_address: 172.20.0.10
+      lan:
+        ipv4_address: 10.10.10.10 # Gateway for clients
     deploy:
       resources:
         limits:
           cpus: "0.50"
           memory: 256MB
 
+  client-dashboard:
+    container_name: dashboard
+    image: shmshd/openwrt-dashboard:latest
+    build: dashboard
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        /update-gateway.sh
+        python app.py
+    environment:
+      ROUTER_IP: 10.10.10.10
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./scripts/update-gateway.sh:/update-gateway.sh
+    networks:
+      lan:
+        ipv4_address: 10.10.10.21
+    depends_on:
+      - router
+    cap_add:
+      - NET_ADMIN
+
+  client-light:
+    container_name: client-light
+    image: alpine:3.23
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        /update-gateway.sh
+        tail -f /dev/null"
+    volumes:
+      - ./scripts/update-gateway.sh:/update-gateway.sh
+    networks:
+      lan:
+        ipv4_address: 10.10.10.22
+    depends_on:
+      - router
+    cap_add:
+      - NET_ADMIN
+
+  client-heavy:
+    container_name: client-heavy
+    image: alpine:3.23
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        apk add --no-cache curl iperf3 bind-tools
+        /update-gateway.sh
+        tail -f /dev/null
+    volumes:
+      - ./scripts/update-gateway.sh:/update-gateway.sh
+    networks:
+      lan:
+        ipv4_address: 10.10.10.23
+    depends_on:
+      - router
+    cap_add:
+      - NET_ADMIN
+
 networks:
-  router:
+  wan:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1
+
+  lan:
+    driver: bridge
+    internal: false
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+          gateway: 10.10.10.1
