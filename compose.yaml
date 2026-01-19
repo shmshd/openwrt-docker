@@ -55,7 +55,7 @@ services:
       - -c
       - |
         /update-gateway.sh
-        tail -f /dev/null"
+        tail -f /dev/null
     volumes:
       - ./scripts/update-gateway.sh:/update-gateway.sh
     networks:
